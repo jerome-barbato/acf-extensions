@@ -1,6 +1,9 @@
 CHANGELOG
 ---------
 
+## 1.3.10
+- Added aria label input on link selector
+
 ## 1.3.9
 - License changed to MIT
 
