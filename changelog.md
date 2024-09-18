@@ -1,6 +1,9 @@
 CHANGELOG
 ---------
 
+## 1.3.11
+- Use curl with agent to download Instagram image
+
 ## 1.3.10
 - Added aria label input on link selector
 

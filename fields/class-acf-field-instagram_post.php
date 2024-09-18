@@ -29,7 +29,17 @@ if( ! class_exists('acf_field_instagram_post') ) :
                 $wp_upload_dir = wp_upload_dir();
 
                 $filepath = $wp_upload_dir['basedir'].'/instagram/'.$matches[0][1].'.jpg';
-                @file_put_contents($filepath, @file_get_contents('https://www.instagram.com/p/'.$matches[0][1].'/media?size='.($field['size']??'m')));
+
+                $ch = curl_init('https://www.instagram.com/p/'.$matches[0][1].'/media?size='.($field['size']??'m'));
+                curl_setopt($ch, CURLOPT_HEADER, 0);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
+
+                $imageContent = curl_exec($ch);
+
+                @file_put_contents($filepath, $imageContent);
+                curl_close($ch);
 
                 if( file_exists($filepath) )
                     $file_url = str_replace($wp_upload_dir['basedir'], $wp_upload_dir['baseurl'], $filepath);
