@@ -1,6 +1,10 @@
 CHANGELOG
 ---------
 
+## 1.3.12
+- Improved component UI
+- Removed table Tinymce plugin, moved to WP Steroids plugin
+
 ## 1.3.11
 - Use curl with agent to download Instagram image
 

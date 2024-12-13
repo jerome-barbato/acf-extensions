@@ -2,14 +2,14 @@
 /*
     Plugin Name: Advanced Custom Fields Extensions
     Description: Advanced Custom Fields add on. Create components, component field, hidden field and latest post field
-    Version: 1.3.11
+    Version: 1.3.12
     Author: Metabolism
     License: MIT
 */
 
 defined('ABSPATH') or die('No script kiddies please!');
 
-define('ACF_EXTENSIONS_VERSION', '1.3.11');
+define('ACF_EXTENSIONS_VERSION', '1.3.12');
 
 /**
  * Load up the translation files
@@ -93,11 +93,6 @@ add_action('acf/init', function (){
         $wpdb->query("DELETE pm FROM $wpdb->postmeta pm LEFT JOIN $wpdb->posts wp ON wp.ID = pm.post_id WHERE wp.ID IS NULL");
         $wpdb->query("DELETE FROM $wpdb->posts WHERE post_type='acf-field'");
     }
-});
-
-add_filter( 'mce_external_plugins', function ( $plugins ) {
-	$plugins['table'] = content_url() . '/plugins/acf-extensions/js/tinymce/table/plugin.min.js';
-	return $plugins;
 });
 
 

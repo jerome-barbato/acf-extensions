@@ -44,8 +44,11 @@ if( ! class_exists('acf_field_components') ) :
             
             
             // add side metabos for component checkbox
-            add_action('add_meta_boxes', array($this, 'add_component_meta_boxes'));
-            
+            add_action('acf/field_group/additional_group_settings_tabs', function (){
+                return array('component' => __( 'Component', 'acf' ));
+            });
+            add_action('acf/field_group/render_group_settings_tab/component', array($this, 'render_group_settings_tab'));
+
             // update the group to acf-component status on save
             add_action('acf/update_field_group', array($this, 'update_component_post_status'));
             
@@ -78,10 +81,6 @@ if( ! class_exists('acf_field_components') ) :
             //add featured image in title if available
             add_filter('acf/fields/flexible_content/layout_title', array($this, 'acf_flexible_content_layout_title_thumbnail'), 10, 4);
             add_filter('acf/fields/flexible_content/layout_title', array($this, 'acf_flexible_content_layout_title_preview'), 9, 4);
-            
-            // handle slug
-            add_action('edit_form_before_permalink', array($this, 'acf_extensions_add_slug'));
-            add_action('acf/render_field_group_settings', array($this, 'acf_extensions_add_slug'));
 
             add_action('wp_insert_post', array($this, 'acf_extensions_update_component'), 10, 3 );
 
@@ -353,9 +352,7 @@ if( ! class_exists('acf_field_components') ) :
                 $field = $this->prepare_field_group_for_export($field);
             }
             
-            if($type == 'fields'){
-                
-                $thumbnail_id = get_post_thumbnail_id(get_the_ID());
+            if($type == 'fields' && $thumbnail_id = $field_group['thumbnail_id']){
                 
                 $wp_upload_dir = wp_upload_dir();
                 
@@ -390,10 +387,7 @@ if( ! class_exists('acf_field_components') ) :
                 }
                 
                 $field_group['active'] = 1;
-                
-                //todo: find a better way than using Request
-                if( isset($_REQUEST['slug']) )
-                    $field_group['slug'] = sanitize_title($_REQUEST['slug']);
+                $field_group['location'] = false;
             }
             
             return $field_group;
@@ -478,13 +472,6 @@ if( ! class_exists('acf_field_components') ) :
         {
             $dir = plugin_dir_url(__DIR__);
             
-            wp_enqueue_script(
-                'acf-group-component_field',
-                "{$dir}js/group.js",
-                array('acf-pro-input'),
-                ACF_EXTENSIONS_VERSION
-            );
-            
             wp_enqueue_style(
                 'acf-group-component_field',
                 "{$dir}css/group.css",
@@ -526,9 +513,6 @@ if( ! class_exists('acf_field_components') ) :
                 'show_in_admin_status_list' => true,
                 'label_count'               => _n_noop('Component <span class="count">(%s)</span>', 'Components <span class="count">(%s)</span>', 'acf-components'),
             ));
-            
-            if( (isset($_GET['post']) && get_post_status($_GET['post']) == 'acf-component') || (isset($_POST['post_ID']) && get_post_status($_POST['post_ID']) == 'acf-component') )
-                add_post_type_support( 'acf-field-group', 'thumbnail' );
         }
         
         /**
@@ -537,15 +521,48 @@ if( ! class_exists('acf_field_components') ) :
          * @since  1.0.0
          * @return void
          */
-        public function add_component_meta_boxes()
+        public function render_group_settings_tab($field_group)
         {
-            add_meta_box(
-                'acf-component-field-metabox',
-                __('ACF Components', 'acf-components'),
-                array($this, 'component_metabox_callback'),
-                'acf-field-group',
-                'side'
+            acf_render_field_wrap(
+                array(
+                    'label'        => __( 'Enable', 'acf' ),
+                    'instructions' => '',
+                    'type'         => 'true_false',
+                    'name'         => 'is_acf_component',
+                    'prefix'       => 'acf_field_group',
+                    'value'        => $field_group['is_acf_component']??'',
+                    'ui'           => 1,
+                    // 'ui_on_text'  => __('Active', 'acf'),
+                    // 'ui_off_text' => __('Inactive', 'acf'),
+                )
             );
+
+            if( $field_group['is_acf_component']??false ){
+
+                global $post;
+
+                acf_render_field_wrap(
+                    array(
+                        'label'        => __( 'Slug', 'acf' ),
+                        'instructions' => '',
+                        'type'         => 'text',
+                        'name'         => 'slug',
+                        'prefix'       => 'acf_field_group',
+                        'value'        => $post->post_excerpt
+                    )
+                );
+
+                acf_render_field_wrap(
+                    array(
+                        'label'        => __( 'Featured image', 'acf' ),
+                        'instructions' => '',
+                        'type'         => 'image',
+                        'name'         => 'thumbnail_id',
+                        'prefix'       => 'acf_field_group',
+                        'value'        => $field_group['thumbnail_id']??''
+                    )
+                );
+            }
         }
         
         
@@ -613,24 +630,6 @@ if( ! class_exists('acf_field_components') ) :
             }
             
             return '<span class="acf-component-title">'.$title.'</span><span class="acf-component-preview-title">'.(!empty($preview)?' : '.substr($preview,0,100):'').'</span>';
-        }
-        
-        
-        /**
-         * Callback for the metabox output
-         *
-         * @since  1.0.0
-         * @return void
-         */
-        public function component_metabox_callback()
-        {
-            global $post;
-            $checked = $post->post_status == 'acf-component'? 'checked' : '';
-            printf('<input type="hidden" name="%s" value="0" />', 'acf_field_group[is_acf_component]');
-            printf('<label><input type="checkbox" name="%s" value="1" %s id="is_acf_component_checkbox" /> %s</label>',
-                'acf_field_group[is_acf_component]',
-                $checked, __('use as component', 'acf-components')
-            );
         }
         
         /**
@@ -756,43 +755,6 @@ if( ! class_exists('acf_field_components') ) :
         
         
         /**
-         * Display slug form
-         *
-         * @return void
-         * @since  1.0.0
-         */
-        public function acf_extensions_add_slug() {
-
-            global $post;
-
-            if($post->post_type == 'acf-field-group' && $post->post_status == 'acf-component'){
-
-                if( defined('ACF_MAJOR_VERSION') && ACF_MAJOR_VERSION > 5 ){
-
-                    $html =
-                        '<div class="acf-field acf-field-text" data-name="slug" data-type="text" style="max-width: 600px;">'.
-                        '<div class="acf-label">'.
-                        '<label for="acf_field_group-description">'.__( 'Slug' ).'</label></div>'.
-                        '<div class="acf-input">'.
-                        '<div class="acf-input-wrap"><input type="text" id="slug" name="slug" value="'.$post->post_excerpt.'" autocomplete="off"></div></div>'.
-                        '</div>';
-                }
-                else{
-
-                $html =
-                    '<div class="hide-if-no-js">'.
-                    '<strong>'.__( 'Slug' ).'</strong> '.
-                    '<span id="editable-post-name"><input type="text" name="slug" value="'.$post->post_excerpt.'" autocomplete="off"></span> </span>'.
-                    '<span id="edit-slug-buttons"><button type="submit" class="save button button-small">OK</button></span>'.
-                    '</div>';
-                }
-
-                echo $html;
-            }
-        }
-        
-        
-        /**
          * Save slug to post_excerpt
          *
          * @param $post_ID
@@ -802,11 +764,11 @@ if( ! class_exists('acf_field_components') ) :
          * @since  1.0.0
          */
         public function acf_extensions_update_component($post_ID, $post, $update) {
-            
-            if( $post->post_type == 'acf-field-group' && isset($_REQUEST['slug']) ){
+
+            if( $post->post_type == 'acf-field-group' && isset($_REQUEST['acf_field_group']['slug']) ){
                 
                 global $wpdb;
-                $wpdb->update( $wpdb->posts, ['post_excerpt' => sanitize_title($_REQUEST['slug'])], ['ID' => $post_ID] );
+                $wpdb->update( $wpdb->posts, ['post_excerpt' => sanitize_title($_REQUEST['acf_field_group']['slug'])], ['ID' => $post_ID] );
             }
         }
         
@@ -830,10 +792,8 @@ if( ! class_exists('acf_field_components') ) :
                 
                 $thumbnail_id = isset($field_group['thumbnail_id'])?$field_group['thumbnail_id']:false;
                 
-                if(!$thumbnail_id && isset($field_group['ID']) && $field_group['ID'])
-                    $thumbnail_id = get_post_thumbnail_id($field_group['ID']);
-                
                 $slug = isset($field_group['slug'])?$field_group['slug']:false;
+
                 if( !$slug )
                     $slug = get_the_excerpt($field_group['ID']);
                 
@@ -871,7 +831,7 @@ if( ! class_exists('acf_field_components') ) :
                 'title'=>$post->title,
                 'slug'=>$post->post_excerpt,
                 'fields'=>acf_get_fields($post->ID),
-                'thumbnail_id'=>get_post_thumbnail_id($post->ID)
+                'thumbnail_id'=>$field_group['thumbnail_id']
             ];
         }
         
