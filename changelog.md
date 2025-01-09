@@ -1,6 +1,9 @@
 CHANGELOG
 ---------
 
+## 1.3.13
+- Fixed a warning in 'acf rule tax type'
+
 ## 1.3.12
 - Improved component UI
 - Removed table Tinymce plugin, moved to WP Steroids plugin

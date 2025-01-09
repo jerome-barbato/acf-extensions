@@ -109,6 +109,9 @@ if( !class_exists('acf_rule_term_type') && function_exists('get_taxonomy_templat
 
 			$template = $rule['value'];
 
+            if(!isset($options['post_type']) )
+                $options['post_type'] = get_post_type($options['post_id']);
+
 			$terms_id = wp_get_object_terms( $options['post_id'], get_object_taxonomies($options['post_type']), ['fields' => 'ids'] );
 			$templates = [];
 
